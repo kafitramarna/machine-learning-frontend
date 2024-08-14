@@ -5,6 +5,8 @@ import '@tabler/core/dist/css/tabler.min.css';
 import '@tabler/core/dist/js/tabler.min.js';
 import Home from './Pages/Home.jsx';
 import LinearRegression from './Pages/Regression/LinearRegression.jsx';
+import PolynomialRegression from './Pages/Regression/PolynomialRegression.jsx';
+import SupportVectorRegression from './Pages/Regression/SupportVectorRegression.jsx';
 const router = [
   {
     path: '/',
@@ -13,6 +15,14 @@ const router = [
   {
     path:'/regression/linear-regression',
     component: <LinearRegression/>
+  },
+  {
+    path:'/regression/polynomial-regression',
+    component: <PolynomialRegression/>
+  },
+  {
+    path:'/regression/support-vector-regression',
+    component: <SupportVectorRegression/>
   }
 
 ]
