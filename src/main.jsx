@@ -7,6 +7,7 @@ import Home from './Pages/Home.jsx';
 import LinearRegression from './Pages/Regression/LinearRegression.jsx';
 import PolynomialRegression from './Pages/Regression/PolynomialRegression.jsx';
 import SupportVectorRegression from './Pages/Regression/SupportVectorRegression.jsx';
+import KNearestNeighborsRegression from './Pages/Regression/KNearestNeighborsRegression.jsx';
 const router = [
   {
     path: '/',
@@ -23,6 +24,10 @@ const router = [
   {
     path:'/regression/support-vector-regression',
     component: <SupportVectorRegression/>
+  },
+  {
+    path:'/regression/k-nearest-neighbors',
+    component: <KNearestNeighborsRegression/>
   }
 
 ]

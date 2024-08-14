@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import Base from "../../Components/Base";
 import { useFileHandling } from "../../hooks/useFileHandling";
 import { usePagination } from "../../hooks/usePagination";
-import axios from "axios";
+import Hasil from "../../Components/Hasil";
+import { regression } from "../../api/regression";
 
 export default function PolynomialRegression() {
   const {
@@ -23,8 +24,7 @@ export default function PolynomialRegression() {
   } = usePagination(1, 20);
 
   const currentItems = data.slice(indexOfFirstItem, indexOfLastItem);
-  const [responseData, setResponseData] = useState(null);
-  const [responseCode, setResponseCode] = useState(null);
+  const [response, setResponse] = useState(null);
   const [formData, setFormData] = useState({
     X_new: "",
     copy_X: "true",
@@ -50,11 +50,7 @@ export default function PolynomialRegression() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(formData);
-    try {
-      const response = await axios.post(
-        "http://127.0.0.1:8080/regression/poly-regression",
-        {
+    const result = await regression("poly-regression", {
           X: xValues,
           y: yData,
           X_new: formData.X_new ? JSON.parse(formData.X_new) : null,
@@ -67,18 +63,8 @@ export default function PolynomialRegression() {
           random_state: formData.random_state
             ? parseInt(formData.random_state, 10)
             : 42,
-        }
-      );
-      console.log(response.data);
-      setResponseData(response.data);
-      setResponseCode(response.status);
-    } catch (error) {
-      console.error(
-        "Error:",
-        error.response ? error.response.data : error.message
-      );
-      setResponseCode(error.response.status);
-    }
+    });
+    setResponse(result);
   };
 
   return (
@@ -495,36 +481,8 @@ export default function PolynomialRegression() {
             </div>
           </div>
 
-          {responseCode === 200 && (
-            <div className="card card-sm">
-              <a href="#" className="d-block">
-                {responseData.image && (
-                  <img
-                    src={`data:image/png;base64,${responseData.image}`}
-                    className="card-img-top"
-                    alt="Model Image"
-                  />
-                )}
-              </a>
-              <div className="card-body">
-                <div className="d-flex align-items-center">
-                  <div className="ms-3">
-                    <h5 className="card-title mb-0">{responseData.model}</h5>
-                    <p className="card-text text-muted mb-1">
-                      R squared value: <strong>{responseData.r2}</strong>
-                    </p>
-                    <p className="card-text text-muted mb-0">
-                      MSE value: <strong>{responseData.mse}</strong>
-                    </p>
-                    {responseData.y_new && (
-                      <p className="card-text text-muted mb-0">
-                        y_new value: <strong>{responseData.y_new}</strong>
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+          {response && response.status === 200 && (
+            <Hasil responseData={response.data} />
           )}
         </>
       )}

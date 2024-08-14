@@ -5,7 +5,7 @@ import { usePagination } from "../../hooks/usePagination";
 import Hasil from "../../Components/Hasil";
 import { regression } from "../../api/regression";
 
-export default function LinearRegression() {
+export default function KNearestNeighborsRegression() {
   const {
     data,
     headers,
@@ -28,43 +28,51 @@ export default function LinearRegression() {
 
   const [formData, setFormData] = useState({
     X_new: "",
-    copy_X: "true",
+    n_neighbors: 5,
+    weights: "uniform",
+    algorithm: "auto",
+    leaf_size: 30,
+    p: 2,
+    metric: "minkowski",
+    metric_params: "",
     n_jobs: "",
-    positive: "false",
-    fit_intercept: "true",
     feature_scaling: "false",
-    test_size: "",
-    random_state: "",
+    test_size: 0.2,
+    random_state: 42,
   });
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prevData) => ({
+    setFormData(prevData => ({
       ...prevData,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: type === 'checkbox' ? checked : value
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const result = await regression("linear-regression", {
+
+    const result = await regression('knn-regression', {
       X: xValues,
-      y: yData,
-      X_new: formData.X_new ? JSON.parse(formData.X_new) : null,
-      copy_X: formData.copy_X === true,
-      n_jobs: formData.n_jobs ? parseInt(formData.n_jobs, 10) : null,
-      positive: formData.positive === true,
-      fit_intercept: formData.fit_intercept === true,
-      feature_scaling: formData.feature_scaling === true,
-      test_size: formData.test_size ? parseFloat(formData.test_size) : 0.2,
-      random_state: formData.random_state
-        ? parseInt(formData.random_state, 10)
-        : 42,
+          y: yData,
+          X_new: formData.X_new ? JSON.parse(formData.X_new) : null,
+          n_neighbors: parseInt(formData.n_neighbors, 10),
+          weights: formData.weights,
+          algorithm: formData.algorithm,
+          leaf_size: parseInt(formData.leaf_size, 10),
+          p: parseInt(formData.p, 10),
+          metric: formData.metric,
+          metric_params: formData.metric_params ? JSON.parse(formData.metric_params) : null,
+          n_jobs: formData.n_jobs ? parseInt(formData.n_jobs, 10) : null,
+          feature_scaling: formData.feature_scaling === "true",
+          test_size: parseFloat(formData.test_size),
+          random_state: parseInt(formData.random_state, 10),
     });
     setResponse(result);
   };
+  
   return (
-    <Base pretitle="Regression" title="Linear Regression">
+    <Base pretitle="Regression" title="K-Nearest Neighbors">
       <div className="card card-md mb-3">
         <div className="card-body">
           <div className="mb-3">
@@ -222,179 +230,227 @@ export default function LinearRegression() {
             </div>
           </div>
           <div className="card card-md mb-3">
-            <div className="card-body">
-              <form onSubmit={handleSubmit}>
-                {/* X_new */}
-                <div className="mb-3">
-                  <label htmlFor="X_new" className="form-label">
-                    X_new:
-                  </label>
-                  <textarea
-                    id="X_new"
-                    name="X_new"
-                    className="form-control"
-                    rows="3"
-                    placeholder="[[7, 8]]"
-                    value={formData.X_new}
-                    onChange={handleChange}
-                  />
-                  <small className="form-text text-muted">
-                    Matriks fitur baru untuk prediksi. Harus sesuai dengan shape
-                    yang sama seperti X. Contoh: [[7, 8]].
-                  </small>
-                </div>
-
-                {/* copy_X */}
-                <div className="mb-3">
-                  <label htmlFor="copy_X" className="form-label">
-                    copy_X:
-                  </label>
-                  <select
-                    id="copy_X"
-                    name="copy_X"
-                    className="form-select"
-                    value={formData.copy_X}
-                    onChange={handleChange}
-                  >
-                    <option value="true">true</option>
-                    <option value="false">false</option>
-                  </select>
-                  <small className="form-text text-muted">
-                    Menentukan apakah data fitur harus disalin atau tidak.
-                    Default: true
-                  </small>
-                </div>
-
-                {/* n_jobs */}
-                <div className="mb-3">
-                  <label htmlFor="n_jobs" className="form-label">
-                    n_jobs:
-                  </label>
-                  <input
-                    type="number"
-                    id="n_jobs"
-                    name="n_jobs"
-                    className="form-control"
-                    placeholder="4"
-                    value={formData.n_jobs}
-                    onChange={handleChange}
-                  />
-                  <small className="form-text text-muted">
-                    Jumlah pekerjaan paralel yang digunakan untuk komputasi.
-                    Default: null
-                  </small>
-                </div>
-
-                {/* positive */}
-                <div className="mb-3">
-                  <label htmlFor="positive" className="form-label">
-                    positive:
-                  </label>
-                  <select
-                    id="positive"
-                    name="positive"
-                    className="form-select"
-                    value={formData.positive}
-                    onChange={handleChange}
-                  >
-                    <option value="true">true</option>
-                    <option value="false">false</option>
-                  </select>
-                  <small className="form-text text-muted">
-                    Menentukan apakah hanya koefisien positif yang
-                    diperbolehkan. Default: false
-                  </small>
-                </div>
-
-                {/* fit_intercept */}
-                <div className="mb-3">
-                  <label htmlFor="fit_intercept" className="form-label">
-                    fit_intercept:
-                  </label>
-                  <select
-                    id="fit_intercept"
-                    name="fit_intercept"
-                    className="form-select"
-                    value={formData.fit_intercept}
-                    onChange={handleChange}
-                  >
-                    <option value="true">true</option>
-                    <option value="false">false</option>
-                  </select>
-                  <small className="form-text text-muted">
-                    Menentukan apakah intersep harus dihitung dan ditambahkan ke
-                    model. Default: true
-                  </small>
-                </div>
-
-                {/* feature_scaling */}
-                <div className="mb-3">
-                  <label htmlFor="feature_scaling" className="form-label">
-                    feature_scaling:
-                  </label>
-                  <select
-                    id="feature_scaling"
-                    name="feature_scaling"
-                    className="form-select"
-                    value={formData.feature_scaling}
-                    onChange={handleChange}
-                  >
-                    <option value="true">true</option>
-                    <option value="false">false</option>
-                  </select>
-                  <small className="form-text text-muted">
-                    Menentukan apakah fitur harus diskalakan sebelum pelatihan
-                    model. Default: false
-                  </small>
-                </div>
-
-                {/* test_size */}
-                <div className="mb-3">
-                  <label htmlFor="test_size" className="form-label">
-                    test_size:
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    id="test_size"
-                    name="test_size"
-                    className="form-control"
-                    placeholder="0.2"
-                    value={formData.test_size}
-                    onChange={handleChange}
-                  />
-                  <small className="form-text text-muted">
-                    Proporsi data pelatihan yang digunakan untuk validasi model.
-                    Default: 0.2
-                  </small>
-                </div>
-
-                {/* random_state */}
-                <div className="mb-3">
-                  <label htmlFor="random_state" className="form-label">
-                    random_state:
-                  </label>
-                  <input
-                    type="number"
-                    id="random_state"
-                    name="random_state"
-                    className="form-control"
-                    placeholder="42"
-                    value={formData.random_state}
-                    onChange={handleChange}
-                  />
-                  <small className="form-text text-muted">
-                    Seed untuk generator angka acak. Default: 42
-                  </small>
-                </div>
-
-                <button type="submit" className="btn btn-primary">
-                  Submit
-                </button>
-              </form>
-            </div>
+      <div className="card-body">
+        <form onSubmit={handleSubmit}>
+          {/* X_new */}
+          <div className="mb-3">
+            <label htmlFor="X_new" className="form-label">X_new:</label>
+            <textarea
+              id="X_new"
+              name="X_new"
+              className="form-control"
+              rows="3"
+              placeholder="[[1, 2], [3, 4]]"
+              value={formData.X_new}
+              onChange={handleChange}
+            />
+            <small className="form-text text-muted">
+              Matriks fitur baru untuk prediksi. Harus sesuai dengan shape yang sama seperti X. Contoh: [[1, 2], [3, 4]].
+            </small>
           </div>
-          {response && response.status === 200 && <Hasil responseData={response.data} />}
+
+          {/* n_neighbors */}
+          <div className="mb-3">
+            <label htmlFor="n_neighbors" className="form-label">n_neighbors:</label>
+            <input
+              type="number"
+              id="n_neighbors"
+              name="n_neighbors"
+              className="form-control"
+              placeholder="5"
+              value={formData.n_neighbors}
+              onChange={handleChange}
+            />
+            <small className="form-text text-muted">
+              Jumlah tetangga terdekat yang akan dipertimbangkan. Default: 5.
+            </small>
+          </div>
+
+          {/* weights */}
+          <div className="mb-3">
+            <label htmlFor="weights" className="form-label">weights:</label>
+            <select
+              id="weights"
+              name="weights"
+              className="form-select"
+              value={formData.weights}
+              onChange={handleChange}
+            >
+              <option value="uniform">uniform</option>
+              <option value="distance">distance</option>
+            </select>
+            <small className="form-text text-muted">
+              Jenis bobot yang akan digunakan. Default: uniform.
+            </small>
+          </div>
+
+          {/* algorithm */}
+          <div className="mb-3">
+            <label htmlFor="algorithm" className="form-label">algorithm:</label>
+            <select
+              id="algorithm"
+              name="algorithm"
+              className="form-select"
+              value={formData.algorithm}
+              onChange={handleChange}
+            >
+              <option value="auto">auto</option>
+              <option value="ball_tree">ball_tree</option>
+              <option value="kd_tree">kd_tree</option>
+              <option value="brute">brute</option>
+            </select>
+            <small className="form-text text-muted">
+              Algoritma yang digunakan untuk pencarian tetangga terdekat. Default: auto.
+            </small>
+          </div>
+
+          {/* leaf_size */}
+          <div className="mb-3">
+            <label htmlFor="leaf_size" className="form-label">leaf_size:</label>
+            <input
+              type="number"
+              id="leaf_size"
+              name="leaf_size"
+              className="form-control"
+              placeholder="30"
+              value={formData.leaf_size}
+              onChange={handleChange}
+            />
+            <small className="form-text text-muted">
+              Ukuran daun untuk algoritma ball_tree dan kd_tree. Default: 30.
+            </small>
+          </div>
+
+          {/* p */}
+          <div className="mb-3">
+            <label htmlFor="p" className="form-label">p:</label>
+            <input
+              type="number"
+              id="p"
+              name="p"
+              className="form-control"
+              placeholder="2"
+              value={formData.p}
+              onChange={handleChange}
+            />
+            <small className="form-text text-muted">
+              Parameter untuk pengukuran jarak. Default: 2 (Euclidean).
+            </small>
+          </div>
+
+          {/* metric */}
+          <div className="mb-3">
+            <label htmlFor="metric" className="form-label">metric:</label>
+            <select
+              id="metric"
+              name="metric"
+              className="form-select"
+              value={formData.metric}
+              onChange={handleChange}
+            >
+              <option value="minkowski">minkowski</option>
+              <option value="euclidean">euclidean</option>
+              <option value="manhattan">manhattan</option>
+            </select>
+            <small className="form-text text-muted">
+              Ukuran jarak yang digunakan. Default: minkowski.
+            </small>
+          </div>
+
+          {/* metric_params */}
+          <div className="mb-3">
+            <label htmlFor="metric_params" className="form-label">metric_params:</label>
+            <textarea
+              id="metric_params"
+              name="metric_params"
+              className="form-control"
+              rows="3"
+              placeholder="{key: value}"
+              value={formData.metric_params}
+              onChange={handleChange}
+            />
+            <small className="form-text text-muted">
+              {`Parameter tambahan untuk metric. Format JSON. Contoh: {"{"key": "value"}"}.`}
+            </small>
+          </div>
+
+          {/* n_jobs */}
+          <div className="mb-3">
+            <label htmlFor="n_jobs" className="form-label">n_jobs:</label>
+            <input
+              type="number"
+              id="n_jobs"
+              name="n_jobs"
+              className="form-control"
+              placeholder=""
+              value={formData.n_jobs}
+              onChange={handleChange}
+            />
+            <small className="form-text text-muted">
+              Jumlah job paralel yang akan digunakan. Default: null (tidak ada paralelisme).
+            </small>
+          </div>
+
+          {/* feature_scaling */}
+          <div className="mb-3">
+            <label htmlFor="feature_scaling" className="form-label">feature_scaling:</label>
+            <select
+              id="feature_scaling"
+              name="feature_scaling"
+              className="form-select"
+              value={formData.feature_scaling}
+              onChange={handleChange}
+            >
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+            <small className="form-text text-muted">
+              Menentukan apakah fitur akan diskalakan. Default: false.
+            </small>
+          </div>
+
+          {/* test_size */}
+          <div className="mb-3">
+            <label htmlFor="test_size" className="form-label">test_size:</label>
+            <input
+              type="number"
+              step="0.01"
+              id="test_size"
+              name="test_size"
+              className="form-control"
+              placeholder="0.2"
+              value={formData.test_size}
+              onChange={handleChange}
+            />
+            <small className="form-text text-muted">
+              Proporsi data untuk set pengujian. Default: 0.2.
+            </small>
+          </div>
+
+          {/* random_state */}
+          <div className="mb-3">
+            <label htmlFor="random_state" className="form-label">random_state:</label>
+            <input
+              type="number"
+              id="random_state"
+              name="random_state"
+              className="form-control"
+              placeholder="42"
+              value={formData.random_state}
+              onChange={handleChange}
+            />
+            <small className="form-text text-muted">
+              Seed untuk pengacakan. Default: 42.
+            </small>
+          </div>
+
+          <button type="submit" className="btn btn-primary">Submit</button>
+        </form>
+      </div>
+    </div>
+          {response && response.status === 200 && (
+              <Hasil responseData={response.data  }/>
+          )}
         </>
       )}
       <div

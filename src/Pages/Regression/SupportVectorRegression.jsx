@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import Base from "../../Components/Base";
 import { useFileHandling } from "../../hooks/useFileHandling";
 import { usePagination } from "../../hooks/usePagination";
 import axios from "axios";
+import Hasil from "../../Components/Hasil";
 
 export default function SupportVectorRegression() {
   const {
@@ -536,35 +537,7 @@ export default function SupportVectorRegression() {
           </div>
 
           {responseCode === 200 && (
-            <div className="card card-sm">
-              <a href="#" className="d-block">
-                {responseData.image && (
-                  <img
-                    src={`data:image/png;base64,${responseData.image}`}
-                    className="card-img-top"
-                    alt="Model Image"
-                  />
-                )}
-              </a>
-              <div className="card-body">
-                <div className="d-flex align-items-center">
-                  <div className="ms-3">
-                    <h5 className="card-title mb-0">{responseData.model}</h5>
-                    <p className="card-text text-muted mb-1">
-                      R squared value: <strong>{responseData.r2}</strong>
-                    </p>
-                    <p className="card-text text-muted mb-0">
-                      MSE value: <strong>{responseData.mse}</strong>
-                    </p>
-                    {responseData.y_new && (
-                      <p className="card-text text-muted mb-0">
-                        y_new value: <strong>{responseData.y_new}</strong>
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <Hasil responseData={responseData} />
           )}
         </>
       )}
