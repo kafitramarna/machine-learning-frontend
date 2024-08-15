@@ -8,6 +8,9 @@ import LinearRegression from './Pages/Regression/LinearRegression.jsx';
 import PolynomialRegression from './Pages/Regression/PolynomialRegression.jsx';
 import SupportVectorRegression from './Pages/Regression/SupportVectorRegression.jsx';
 import KNearestNeighborsRegression from './Pages/Regression/KNearestNeighborsRegression.jsx';
+import DecisionTreeRegression from './Pages/Regression/DecisionTreeRegression.jsx';
+import RandomForestRegression from './Pages/Regression/RandomForestRegression.jsx';
+import GradientBoostingRegression from './Pages/Regression/GradientBoostingRegression.jsx';
 const router = [
   {
     path: '/',
@@ -28,6 +31,17 @@ const router = [
   {
     path:'/regression/k-nearest-neighbors',
     component: <KNearestNeighborsRegression/>
+  },
+  {
+    path:'/regression/decision-tree-regression',
+    component: <DecisionTreeRegression/>
+  },
+  {
+    path:'/regression/random-forest-regression',
+    component: <RandomForestRegression/>
+  },{
+    path: '/regression/gradient-boosting-regression',
+    component: <GradientBoostingRegression/>
   }
 
 ]
