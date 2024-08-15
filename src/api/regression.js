@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "http://127.0.0.1:8080/regression";
+const BASE_URL = "https://machine-learning-flask-production.up.railway.app/regression";
 
 export const regression = async (type,data) => {
     try {

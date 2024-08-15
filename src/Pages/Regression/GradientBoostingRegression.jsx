@@ -12,7 +12,7 @@ import Fallback from "../../Components/Fallback";
 
 // Lazy load Hasil component
 const Hasil = lazy(() => import("../../Components/Hasil"));
-export default function RandomForestRegression() {
+export default function GradientBoostingRegression() {
   const {
     data,
     headers,
@@ -39,24 +39,24 @@ export default function RandomForestRegression() {
     test_size: 0.2,
     random_state: 42,
     n_estimators: 100,
-    criterion: "squared_error",
-    max_depth: null,
+    learning_rate: 0.1,
+    loss: "squared_error",
+    criterion: "friedman_mse",
     min_samples_split: 2,
     min_samples_leaf: 1,
     min_weight_fraction_leaf: 0.0,
-    max_features: 1.0,
-    max_leaf_nodes: null,
-    bootstrap: true,
-    oob_score: false,
-    n_jobs: null,
-    random_state_rf: null,
-    verbose: 0,
+    max_depth: null,
+    max_features: "sqrt",
+    alpha: 0.9,
+    init: null,
+    subsample: 1.0,
+    validation_fraction: 0.1,
+    n_iter_no_change: null,
+    tol: 0.0001,
     warm_start: false,
     ccp_alpha: 0.0,
-    max_samples: null,
-    monotonic_cst: null,
   });
-
+  
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prevData) => ({
@@ -64,11 +64,11 @@ export default function RandomForestRegression() {
       [name]: type === "checkbox" ? checked : value,
     }));
   };
-
+  
   const handleSubmit = async (e) => {
     setResponse(null);
     e.preventDefault();
-    const result = await regression("random-forest-regression", {
+    const result = await regression("gradient-boosting-regression", {
       X: xValues,
       y: yData,
       X_new: formData.X_new ? JSON.parse(formData.X_new) : null,
@@ -77,37 +77,27 @@ export default function RandomForestRegression() {
       test_size: parseFloat(formData.test_size),
       random_state: parseInt(formData.random_state, 10),
       n_estimators: parseInt(formData.n_estimators, 10),
+      learning_rate: parseFloat(formData.learning_rate),
+      loss: formData.loss,
       criterion: formData.criterion,
-      max_depth:
-        formData.max_depth !== null ? parseInt(formData.max_depth, 10) : null,
       min_samples_split: parseInt(formData.min_samples_split, 10),
       min_samples_leaf: parseInt(formData.min_samples_leaf, 10),
       min_weight_fraction_leaf: parseFloat(formData.min_weight_fraction_leaf),
-      max_features: formData.max_features == 1.0 ? 1.0 : formData.max_features,
-      max_leaf_nodes:
-        formData.max_leaf_nodes !== null
-          ? parseInt(formData.max_leaf_nodes, 10)
-          : null,
-      bootstrap: formData.bootstrap === "true",
-      oob_score: formData.oob_score === "true",
-      n_jobs: formData.n_jobs !== null ? parseInt(formData.n_jobs, 10) : null,
-      random_state_rf:
-        formData.random_state_rf !== null
-          ? parseInt(formData.random_state_rf, 10)
-          : null,
-      verbose: parseInt(formData.verbose, 10),
+      max_depth: formData.max_depth !== null ? parseInt(formData.max_depth, 10) : null,
+      max_features: formData.max_features,
+      alpha: parseFloat(formData.alpha),
+      init: formData.init || null,
+      subsample: parseFloat(formData.subsample),
+      validation_fraction: parseFloat(formData.validation_fraction),
+      n_iter_no_change: formData.n_iter_no_change !== null ? parseInt(formData.n_iter_no_change, 10) : null,
+      tol: parseFloat(formData.tol),
       warm_start: formData.warm_start === "true",
       ccp_alpha: parseFloat(formData.ccp_alpha),
-      max_samples:
-        formData.max_samples !== null
-          ? parseInt(formData.max_samples, 10)
-          : null,
-      monotonic_cst: formData.monotonic_cst,
     });
-
+  
     setResponse(result);
   };
-
+  
   const form_inputs = [
     {
       id: "X_new",
@@ -117,8 +107,7 @@ export default function RandomForestRegression() {
       value: formData.X_new,
       onChange: handleChange,
       label: "X_new",
-      description:
-        "Matriks fitur baru untuk prediksi. Format: [[feature1, feature2], [feature3, feature4]]. Default: null.",
+      description: "Matriks fitur baru untuk prediksi. Format: [[feature1, feature2], [feature3, feature4]]. Default: null.",
     },
     {
       id: "feature_scaling_X",
@@ -174,7 +163,32 @@ export default function RandomForestRegression() {
       value: formData.n_estimators,
       onChange: handleChange,
       label: "Number of Estimators",
-      description: "Jumlah pohon dalam hutan. Default: 100.",
+      description: "Jumlah estimator dalam model. Default: 100.",
+    },
+    {
+      id: "learning_rate",
+      name: "learning_rate",
+      type: "number",
+      placeholder: "0.1",
+      value: formData.learning_rate,
+      onChange: handleChange,
+      label: "Learning Rate",
+      description: "Tingkat pembelajaran. Default: 0.1.",
+    },
+    {
+      id: "loss",
+      name: "loss",
+      type: "select",
+      value: formData.loss,
+      onChange: handleChange,
+      label: "Loss",
+      description: "Fungsi loss yang digunakan. Default: 'squared_error'.",
+      options: [
+        { value: "squared_error", label: "Squared Error" },
+        { value: "absolute_error", label: "Absolute Error" },
+        { value: "huber", label: "Huber" },
+        { value: "poisson", label: "Poisson" },
+      ],
     },
     {
       id: "criterion",
@@ -183,14 +197,42 @@ export default function RandomForestRegression() {
       value: formData.criterion,
       onChange: handleChange,
       label: "Criterion",
-      description:
-        "Fungsi yang mengukur kualitas split. Default: 'squared_error'.",
+      description: "Fungsi yang digunakan untuk mengukur kualitas split. Default: 'friedman_mse'.",
       options: [
-        { value: "squared_error", label: "Squared Error" },
         { value: "friedman_mse", label: "Friedman MSE" },
+        { value: "squared_error", label: "Squared Error" },
         { value: "absolute_error", label: "Absolute Error" },
-        { value: "poisson", label: "Poisson" },
       ],
+    },
+    {
+      id: "min_samples_split",
+      name: "min_samples_split",
+      type: "number",
+      placeholder: "2",
+      value: formData.min_samples_split,
+      onChange: handleChange,
+      label: "Min Samples Split",
+      description: "Jumlah minimum sampel yang dibutuhkan untuk split internal node. Default: 2.",
+    },
+    {
+      id: "min_samples_leaf",
+      name: "min_samples_leaf",
+      type: "number",
+      placeholder: "1",
+      value: formData.min_samples_leaf,
+      onChange: handleChange,
+      label: "Min Samples Leaf",
+      description: "Jumlah minimum sampel yang dibutuhkan untuk menjadi leaf node. Default: 1.",
+    },
+    {
+      id: "min_weight_fraction_leaf",
+      name: "min_weight_fraction_leaf",
+      type: "number",
+      placeholder: "0.0",
+      value: formData.min_weight_fraction_leaf,
+      onChange: handleChange,
+      label: "Min Weight Fraction Leaf",
+      description: "Minimum fraction of the sum total of weights required to be at a leaf node. Default: 0.0.",
     },
     {
       id: "max_depth",
@@ -203,121 +245,78 @@ export default function RandomForestRegression() {
       description: "Kedalaman maksimum dari pohon. Default: None.",
     },
     {
-      id: "min_samples_split",
-      name: "min_samples_split",
-      type: "number",
-      placeholder: "2",
-      value: formData.min_samples_split,
-      onChange: handleChange,
-      label: "Min Samples Split",
-      description:
-        "Jumlah minimum sampel yang dibutuhkan untuk split internal node. Default: 2.",
-    },
-    {
-      id: "min_samples_leaf",
-      name: "min_samples_leaf",
-      type: "number",
-      placeholder: "1",
-      value: formData.min_samples_leaf,
-      onChange: handleChange,
-      label: "Min Samples Leaf",
-      description:
-        "Jumlah minimum sampel yang dibutuhkan untuk menjadi leaf node. Default: 1.",
-    },
-    {
-      id: "min_weight_fraction_leaf",
-      name: "min_weight_fraction_leaf",
-      type: "number",
-      placeholder: "0.0",
-      value: formData.min_weight_fraction_leaf,
-      onChange: handleChange,
-      label: "Min Weight Fraction Leaf",
-      description:
-        "Minimum fraction of the sum total of weights required to be at a leaf node. Default: 0.0.",
-    },
-    {
       id: "max_features",
       name: "max_features",
       type: "select",
-      value: formData.max_features || "1.0",
+      value: formData.max_features,
       onChange: handleChange,
       label: "Max Features",
-      description:
-        "Jumlah fitur yang dipertimbangkan untuk split. Default: 1.0 (semua fitur).",
+      description: "Jumlah fitur yang dipertimbangkan untuk split. Default: 'sqrt'.",
       options: [
-        { value: 1.0, label: "All Features (Default)" },
         { value: "sqrt", label: "Square Root" },
         { value: "log2", label: "Log2" },
         { value: "", label: "Custom (Enter a Number or Fraction)" },
       ],
     },
     {
-      id: "max_leaf_nodes",
-      name: "max_leaf_nodes",
+      id: "alpha",
+      name: "alpha",
+      type: "number",
+      placeholder: "0.9",
+      value: formData.alpha,
+      onChange: handleChange,
+      label: "Alpha",
+      description: "Alpha quantile for the huber loss function. Default: 0.9.",
+    },
+    {
+      id: "init",
+      name: "init",
+      type: "text",
+      placeholder: "None",
+      value: formData.init,
+      onChange: handleChange,
+      label: "Init",
+      description: "Estimator untuk inisialisasi. Default: None.",
+    },
+    {
+      id: "subsample",
+      name: "subsample",
+      type: "number",
+      placeholder: "1.0",
+      value: formData.subsample,
+      onChange: handleChange,
+      label: "Subsample",
+      description: "Fraksi sampel yang digunakan untuk fitting. Default: 1.0.",
+    },
+    {
+      id: "validation_fraction",
+      name: "validation_fraction",
+      type: "number",
+      placeholder: "0.1",
+      value: formData.validation_fraction,
+      onChange: handleChange,
+      label: "Validation Fraction",
+      description: "Fraksi data training yang digunakan untuk validasi. Default: 0.1.",
+    },
+    {
+      id: "n_iter_no_change",
+      name: "n_iter_no_change",
       type: "number",
       placeholder: "None",
-      value: formData.max_leaf_nodes,
+      value: formData.n_iter_no_change,
       onChange: handleChange,
-      label: "Max Leaf Nodes",
-      description: "Jumlah maksimum leaf nodes. Default: None.",
+      label: "N Iter No Change",
+      description: "Jumlah iterasi tanpa perubahan untuk menghentikan pelatihan lebih awal. Default: None.",
     },
     {
-      id: "bootstrap",
-      name: "bootstrap",
-      type: "select",
-      value: formData.bootstrap,
-      onChange: handleChange,
-      label: "Bootstrap",
-      description: "Apakah bootstrap samples digunakan? Default: true.",
-      options: [
-        { value: "true", label: "True" },
-        { value: "false", label: "False" },
-      ],
-    },
-    {
-      id: "oob_score",
-      name: "oob_score",
-      type: "select",
-      value: formData.oob_score,
-      onChange: handleChange,
-      label: "OOB Score",
-      description:
-        "Apakah menggunakan out-of-bag samples untuk estimasi score? Default: false.",
-      options: [
-        { value: "true", label: "True" },
-        { value: "false", label: "False" },
-      ],
-    },
-    {
-      id: "n_jobs",
-      name: "n_jobs",
+      id: "tol",
+      name: "tol",
       type: "number",
-      placeholder: "None",
-      value: formData.n_jobs,
+      placeholder: "0.0001",
+      value: formData.tol,
       onChange: handleChange,
-      label: "N Jobs",
-      description: "Jumlah pekerjaan paralel untuk dijalankan. Default: None.",
-    },
-    {
-      id: "random_state_rf",
-      name: "random_state_rf",
-      type: "number",
-      placeholder: "None",
-      value: formData.random_state_rf,
-      onChange: handleChange,
-      label: "Random State RF",
-      description:
-        "Seed untuk random number generator pada Random Forest. Default: None.",
-    },
-    {
-      id: "verbose",
-      name: "verbose",
-      type: "number",
-      placeholder: "0",
-      value: formData.verbose,
-      onChange: handleChange,
-      label: "Verbose",
-      description: "Level verbose output. Default: 0.",
+      label: "Tolerance",
+      description: "Tolerance untuk menghentikan pelatihan lebih awal. Default: 0.0001.",
     },
     {
       id: "warm_start",
@@ -326,8 +325,7 @@ export default function RandomForestRegression() {
       value: formData.warm_start,
       onChange: handleChange,
       label: "Warm Start",
-      description:
-        "Apakah menggunakan warm start untuk melanjutkan fitting sebelumnya? Default: false.",
+      description: "Apakah akan menggunakan warm start untuk melanjutkan pelatihan dari model sebelumnya? Default: false.",
       options: [
         { value: "true", label: "True" },
         { value: "false", label: "False" },
@@ -341,34 +339,13 @@ export default function RandomForestRegression() {
       value: formData.ccp_alpha,
       onChange: handleChange,
       label: "CCP Alpha",
-      description:
-        "Complexity parameter untuk minimal cost-complexity pruning. Default: 0.0.",
-    },
-    {
-      id: "max_samples",
-      name: "max_samples",
-      type: "number",
-      placeholder: "None",
-      value: formData.max_samples,
-      onChange: handleChange,
-      label: "Max Samples",
-      description: "Jumlah sampel maksimum untuk bootstrap. Default: None.",
-    },
-    {
-      id: "monotonic_cst",
-      name: "monotonic_cst",
-      type: "textarea",
-      placeholder: "None",
-      value: formData.monotonic_cst,
-      onChange: handleChange,
-      label: "Monotonic Constraints",
-      description:
-        "Monotonic constraints for the tree. Format: 'c1 > c2'. Default: None.",
+      description: "Kompleksitas regularisasi minimal untuk pruning pohon. Default: 0.0.",
     },
   ];
+  
 
   return (
-    <Base pretitle="Regression" title="Random Forest Regression">
+    <Base pretitle="Regression" title="Gradient Boosting Regression">
       {response && response.status !== 200 && (
         <Alerts message={response.data.error} />
       )}
