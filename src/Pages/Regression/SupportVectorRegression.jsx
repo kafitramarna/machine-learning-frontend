@@ -1,10 +1,17 @@
-import { useState } from "react";
+import { useState, Suspense, lazy } from "react";
 import Base from "../../Components/Base";
 import { useFileHandling } from "../../hooks/useFileHandling";
 import { usePagination } from "../../hooks/usePagination";
-import axios from "axios";
-import Hasil from "../../Components/Hasil";
+import FormTunning from "../../Components/FormTunning";
+import Modal from "../../Components/Modal";
+import DataTable from "../../Components/DataTable";
+import FileUpload from "../../Components/FileUpload";
+import Alerts from "../../Components/Alerts";
+import { regression } from "../../api/regression";
+import Fallback from "../../Components/Fallback";
 
+// Lazy load Hasil component
+const Hasil = lazy(() => import("../../Components/Hasil"));
 export default function SupportVectorRegression() {
   const {
     data,
@@ -24,8 +31,7 @@ export default function SupportVectorRegression() {
   } = usePagination(1, 20);
 
   const currentItems = data.slice(indexOfFirstItem, indexOfLastItem);
-  const [responseData, setResponseData] = useState(null);
-  const [responseCode, setResponseCode] = useState(null);
+  const [response,setResponse] = useState(null)
   const [formData, setFormData] = useState({
     X_new: "",
     kernel: "rbf",
@@ -52,12 +58,9 @@ export default function SupportVectorRegression() {
   };
 
   const handleSubmit = async (e) => {
+    setResponse(null);
     e.preventDefault();
-    console.log(formData);
-    try {
-      const response = await axios.post(
-        "http://127.0.0.1:8080/regression/svr-regression",
-        {
+    const result = await regression("svr-regression", {
           X: xValues,
           y: yData,
           X_new: formData.X_new ? JSON.parse(formData.X_new) : null,
@@ -76,549 +79,194 @@ export default function SupportVectorRegression() {
           random_state: parseInt(formData.random_state, 10),
         }
       );
-      console.log(response.data);
-      setResponseData(response.data);
-      setResponseCode(response.status);
-    } catch (error) {
-      console.error(
-        "Error:",
-        error.response ? error.response.data : error.message
-      );
-      setResponseCode(error.response.status);
-    }
+    setResponse(result);
   };
+  const form_inputs = [
+    {
+      id: "X_new",
+      name: "X_new",
+      type: "textarea",
+      placeholder: "[[1, 2], [3, 4]]",
+      value: formData.X_new,
+      onChange: handleChange,
+      label: "X_new",
+      description:
+        "Matriks fitur baru untuk prediksi. Format: [[feature1, feature2], [feature3, feature4]]. Default: null.",
+    },
+    {
+      id: "kernel",
+      name: "kernel",
+      type: "select",
+      value: formData.kernel,
+      onChange: handleChange,
+      label: "Kernel",
+      description: "Fungsi kernel yang akan digunakan dalam algoritma. Default: 'rbf'.",
+      options: [
+        { value: "linear", label: "Linear" },
+        { value: "poly", label: "Polynomial" },
+        { value: "rbf", label: "RBF" },
+        { value: "sigmoid", label: "Sigmoid" },
+      ],
+    },
+    {
+      id: "degree",
+      name: "degree",
+      type: "number",
+      placeholder: "3",
+      value: formData.degree,
+      onChange: handleChange,
+      label: "Degree",
+      description: "Degree dari polynomial kernel function ('poly'). Diabaikan untuk kernel lain. Default: 3.",
+    },
+    {
+      id: "gamma",
+      name: "gamma",
+      type: "select",
+      value: formData.gamma,
+      onChange: handleChange,
+      label: "Gamma",
+      description: "Koefisien kernel untuk kernel RBF, poly, dan sigmoid. Default: 'scale'.",
+      options: [
+        { value: "scale", label: "Scale" },
+        { value: "auto", label: "Auto" },
+      ],
+    },
+    {
+      id: "coef0",
+      name: "coef0",
+      type: "number",
+      placeholder: "0.0",
+      value: formData.coef0,
+      onChange: handleChange,
+      label: "Coef0",
+      description: "Istilah independen di kernel polynomial dan sigmoid. Default: 0.0.",
+    },
+    {
+      id: "tol",
+      name: "tol",
+      type: "number",
+      placeholder: "0.001",
+      value: formData.tol,
+      onChange: handleChange,
+      label: "Tolerance",
+      description: "Toleransi untuk criteria stop. Default: 0.001.",
+    },
+    {
+      id: "C",
+      name: "C",
+      type: "number",
+      placeholder: "1.0",
+      value: formData.C,
+      onChange: handleChange,
+      label: "Regularization Parameter (C)",
+      description: "Parameter regulasi. Default: 1.0.",
+    },
+    {
+      id: "epsilon",
+      name: "epsilon",
+      type: "number",
+      placeholder: "0.1",
+      value: formData.epsilon,
+      onChange: handleChange,
+      label: "Epsilon",
+      description: "Nilai epsilon dalam fungsi loss epsilon-insensitive. Default: 0.1.",
+    },
+    {
+      id: "shrinking",
+      name: "shrinking",
+      type: "select",
+      value: formData.shrinking,
+      onChange: handleChange,
+      label: "Shrinking",
+      description: "Apakah akan menggunakan heuristic shrinking. Default: true.",
+      options: [
+        { value: "true", label: "True" },
+        { value: "false", label: "False" },
+      ],
+    },
+    {
+      id: "cache_size",
+      name: "cache_size",
+      type: "number",
+      placeholder: "200",
+      value: formData.cache_size,
+      onChange: handleChange,
+      label: "Cache Size",
+      description: "Ukuran cache kernel (dalam MB). Default: 200.",
+    },
+    {
+      id: "verbose",
+      name: "verbose",
+      type: "select",
+      value: formData.verbose,
+      onChange: handleChange,
+      label: "Verbose",
+      description: "Apakah akan mengaktifkan output verbose. Default: false.",
+      options: [
+        { value: "true", label: "True" },
+        { value: "false", label: "False" },
+      ],
+    },
+    {
+      id: "max_iter",
+      name: "max_iter",
+      type: "number",
+      placeholder: "-1",
+      value: formData.max_iter,
+      onChange: handleChange,
+      label: "Max Iterations",
+      description: "Jumlah maksimum iterasi. Default: -1 (tak terbatas).",
+    },
+    {
+      id: "test_size",
+      name: "test_size",
+      type: "number",
+      placeholder: "0.2",
+      value: formData.test_size,
+      onChange: handleChange,
+      label: "Test Size",
+      description: "Proporsi data untuk set pengujian. Default: 0.2.",
+    },
+    {
+      id: "random_state",
+      name: "random_state",
+      type: "number",
+      placeholder: "42",
+      value: formData.random_state,
+      onChange: handleChange,
+      label: "Random State",
+      description: "Seed untuk random number generator. Default: 42.",
+    },
+  ];
+
 
   return (
     <Base pretitle="Regression" title="Support Vector Regression">
-      <div className="card card-md mb-3">
-        <div className="card-body">
-          <div className="mb-3">
-            <div className="form-label">Masukkan File Dataset</div>
-            <input
-              type="file"
-              className="form-control"
-              accept=".csv"
-              onChange={handleFileChange}
-            />
-          </div>
-        </div>
-      </div>
+      {response && response.status !== 200 && (
+        <Alerts message={response.data.error} />
+      )}
+      <FileUpload handleFileChange={handleFileChange} />
       {data.length > 0 && (
         <>
-          <div className="card card-md mb-3">
-            <div className="card-body">
-              <table className="table table-striped">
-                <thead>
-                  <tr>
-                    {headers.map((header, index) => (
-                      <th key={index}>{header}</th>
-                    ))}
-                  </tr>
-                  <tr>
-                    {headers.map((_, index) => (
-                      <th key={index}>
-                        <select
-                          className="form-select"
-                          onChange={(e) =>
-                            handleDropdownChange(index, e.target.value)
-                          }
-                          value={dropdownValues[index] || "-"}
-                          disabled={
-                            dropdownValues.includes("Y") &&
-                            dropdownValues[index] !== "Y"
-                          }
-                        >
-                          <option value="-">-</option>
-                          <option value="X">X</option>
-                          <option value="Y">Y</option>
-                        </select>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentItems.map((row, rowIndex) => (
-                    <tr key={rowIndex}>
-                      {headers.map((header, colIndex) => (
-                        <td key={colIndex}>{row[header]}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <ul className="pagination">
-                <li
-                  className={`page-item ${currentPage === 1 ? "disabled" : ""}`}
-                >
-                  <a
-                    className="page-link"
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (currentPage > 1) handlePageChange(currentPage - 1);
-                    }}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="icon"
-                    >
-                      <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                      <path d="M15 6l-6 6l6 6"></path>
-                    </svg>
-                  </a>
-                </li>
-                {Array.from({ length: totalPages }, (_, index) => (
-                  <li
-                    key={index + 1}
-                    className={`page-item ${
-                      currentPage === index + 1 ? "active" : ""
-                    }`}
-                  >
-                    <a
-                      className="page-link"
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handlePageChange(index + 1);
-                      }}
-                    >
-                      {index + 1}
-                    </a>
-                  </li>
-                ))}
-                <li
-                  className={`page-item ${
-                    currentPage === totalPages ? "disabled" : ""
-                  }`}
-                >
-                  <a
-                    className="page-link"
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (currentPage < totalPages)
-                        handlePageChange(currentPage + 1);
-                    }}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="icon"
-                    >
-                      <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                      <path d="M9 6l6 6l-6 6"></path>
-                    </svg>
-                  </a>
-                </li>
-              </ul>
-              <div className="d-flex gap-2">
-                <a
-                  href="#"
-                  className="btn btn-primary"
-                  data-bs-toggle="modal"
-                  data-bs-target="#modal-X"
-                >
-                  Lihat Nilai X
-                </a>
-                <a
-                  href="#"
-                  className="btn btn-primary"
-                  data-bs-toggle="modal"
-                  data-bs-target="#modal-y"
-                >
-                  Lihat Nilai y
-                </a>
-              </div>
-            </div>
-          </div>
-          <div className="card card-md mb-3">
-            <div className="card-body">
-              <form onSubmit={handleSubmit}>
-                {/* X_new */}
-                <div className="mb-3">
-                  <label htmlFor="X_new" className="form-label">
-                    X_new:
-                  </label>
-                  <textarea
-                    id="X_new"
-                    name="X_new"
-                    className="form-control"
-                    rows="3"
-                    placeholder="[[7, 8]]"
-                    value={formData.X_new}
-                    onChange={handleChange}
-                  />
-                  <small className="form-text text-muted">
-                    Matriks fitur baru untuk prediksi. Harus sesuai dengan shape
-                    yang sama seperti X. Contoh: [[7, 8]].
-                  </small>
-                </div>
-
-                {/* kernel */}
-                <div className="mb-3">
-                  <label htmlFor="kernel" className="form-label">
-                    kernel:
-                  </label>
-                  <select
-                    id="kernel"
-                    name="kernel"
-                    className="form-select"
-                    value={formData.kernel}
-                    onChange={handleChange}
-                  >
-                    <option value="linear">linear</option>
-                    <option value="poly">poly</option>
-                    <option value="rbf">rbf</option>
-                    <option value="sigmoid">sigmoid</option>
-                  </select>
-                  <small className="form-text text-muted">
-                    Fungsi kernel yang digunakan. Default: rbf.
-                  </small>
-                </div>
-
-                {/* degree */}
-                <div className="mb-3">
-                  <label htmlFor="degree" className="form-label">
-                    degree:
-                  </label>
-                  <input
-                    type="number"
-                    id="degree"
-                    name="degree"
-                    className="form-control"
-                    placeholder="3"
-                    value={formData.degree}
-                    onChange={handleChange}
-                  />
-                  <small className="form-text text-muted">
-                    {`Derajat polinomial untuk kernel 'poly'. Default: 3.`}
-                  </small>
-                </div>
-
-                {/* gamma */}
-                <div className="mb-3">
-                  <label htmlFor="gamma" className="form-label">
-                    gamma:
-                  </label>
-                  <select
-                    id="gamma"
-                    name="gamma"
-                    className="form-select"
-                    value={formData.gamma}
-                    onChange={handleChange}
-                  >
-                    <option value="scale">scale</option>
-                    <option value="auto">auto</option>
-                    <option value="float">float</option>
-                  </select>
-                  <small className="form-text text-muted">
-                    Parameter gamma untuk kernel. Default: scale.
-                  </small>
-                </div>
-
-                {/* coef0 */}
-                <div className="mb-3">
-                  <label htmlFor="coef0" className="form-label">
-                    coef0:
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    id="coef0"
-                    name="coef0"
-                    className="form-control"
-                    placeholder="0.0"
-                    value={formData.coef0}
-                    onChange={handleChange}
-                  />
-                  <small className="form-text text-muted">
-                    Parameter coef0 untuk kernel. Default: 0.0.
-                  </small>
-                </div>
-
-                {/* tol */}
-                <div className="mb-3">
-                  <label htmlFor="tol" className="form-label">
-                    tol:
-                  </label>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    id="tol"
-                    name="tol"
-                    className="form-control"
-                    placeholder="0.001"
-                    value={formData.tol}
-                    onChange={handleChange}
-                  />
-                  <small className="form-text text-muted">
-                    Toleransi untuk kondisi berhenti. Default: 0.001.
-                  </small>
-                </div>
-
-                {/* C */}
-                <div className="mb-3">
-                  <label htmlFor="C" className="form-label">
-                    C:
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    id="C"
-                    name="C"
-                    className="form-control"
-                    placeholder="1.0"
-                    value={formData.C}
-                    onChange={handleChange}
-                  />
-                  <small className="form-text text-muted">
-                    Parameter regularisasi. Default: 1.0.
-                  </small>
-                </div>
-
-                {/* epsilon */}
-                <div className="mb-3">
-                  <label htmlFor="epsilon" className="form-label">
-                    epsilon:
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    id="epsilon"
-                    name="epsilon"
-                    className="form-control"
-                    placeholder="0.1"
-                    value={formData.epsilon}
-                    onChange={handleChange}
-                  />
-                  <small className="form-text text-muted">
-                    Parameter epsilon untuk model. Default: 0.1.
-                  </small>
-                </div>
-
-                {/* shrinking */}
-                <div className="mb-3">
-                  <label htmlFor="shrinking" className="form-label">
-                    shrinking:
-                  </label>
-                  <select
-                    id="shrinking"
-                    name="shrinking"
-                    className="form-select"
-                    value={formData.shrinking}
-                    onChange={handleChange}
-                  >
-                    <option value="true">true</option>
-                    <option value="false">false</option>
-                  </select>
-                  <small className="form-text text-muted">
-                    Menentukan apakah teknik shrinking digunakan. Default: true.
-                  </small>
-                </div>
-
-                {/* cache_size */}
-                <div className="mb-3">
-                  <label htmlFor="cache_size" className="form-label">
-                    cache_size:
-                  </label>
-                  <input
-                    type="number"
-                    id="cache_size"
-                    name="cache_size"
-                    className="form-control"
-                    placeholder="200"
-                    value={formData.cache_size}
-                    onChange={handleChange}
-                  />
-                  <small className="form-text text-muted">
-                    Ukuran cache dalam MB. Default: 200.
-                  </small>
-                </div>
-
-                {/* verbose */}
-                <div className="mb-3">
-                  <label htmlFor="verbose" className="form-label">
-                    verbose:
-                  </label>
-                  <select
-                    id="verbose"
-                    name="verbose"
-                    className="form-select"
-                    value={formData.verbose}
-                    onChange={handleChange}
-                  >
-                    <option value="true">true</option>
-                    <option value="false">false</option>
-                  </select>
-                  <small className="form-text text-muted">
-                    Menentukan apakah output verbose diaktifkan. Default: false.
-                  </small>
-                </div>
-
-                {/* max_iter */}
-                <div className="mb-3">
-                  <label htmlFor="max_iter" className="form-label">
-                    max_iter:
-                  </label>
-                  <input
-                    type="number"
-                    id="max_iter"
-                    name="max_iter"
-                    className="form-control"
-                    placeholder="-1"
-                    value={formData.max_iter}
-                    onChange={handleChange}
-                  />
-                  <small className="form-text text-muted">
-                    Jumlah iterasi maksimum untuk solver. Default: -1 (tak
-                    terbatas).
-                  </small>
-                </div>
-
-                {/* test_size */}
-                <div className="mb-3">
-                  <label htmlFor="test_size" className="form-label">
-                    test_size:
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    id="test_size"
-                    name="test_size"
-                    className="form-control"
-                    placeholder="0.2"
-                    value={formData.test_size}
-                    onChange={handleChange}
-                  />
-                  <small className="form-text text-muted">
-                    Proporsi data untuk set pengujian. Default: 0.2.
-                  </small>
-                </div>
-
-                {/* random_state */}
-                <div className="mb-3">
-                  <label htmlFor="random_state" className="form-label">
-                    random_state:
-                  </label>
-                  <input
-                    type="number"
-                    id="random_state"
-                    name="random_state"
-                    className="form-control"
-                    placeholder="42"
-                    value={formData.random_state}
-                    onChange={handleChange}
-                  />
-                  <small className="form-text text-muted">
-                    Seed untuk pengacakan. Default: 42.
-                  </small>
-                </div>
-
-                <button type="submit" className="btn btn-primary">
-                  Submit
-                </button>
-              </form>
-            </div>
-          </div>
-
-          {responseCode === 200 && (
-            <Hasil responseData={responseData} />
-          )}
+          <DataTable
+            headers={headers}
+            data={currentItems}
+            dropdownValues={dropdownValues}
+            handleDropdownChange={handleDropdownChange}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            handlePageChange={handlePageChange}
+          />
+          <FormTunning form_inputs={form_inputs} handleSubmit={handleSubmit} />
+          {/* Suspense wrapper for Hasil component */}
+          <Suspense fallback={<Fallback/>}>
+            {response && response.status === 200 && (
+              <Hasil responseData={response.data} />
+            )}
+          </Suspense>
         </>
       )}
-      <div
-        className="modal modal-blur fade"
-        id="modal-X"
-        tabIndex={-1}
-        style={{ display: "none" }}
-        aria-hidden="true"
-      >
-        <div
-          className="modal-dialog modal-dialog-centered modal-dialog-scrollable"
-          role="document"
-        >
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5 className="modal-title">Nilai X</h5>
-              <button
-                type="button"
-                className="btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-              />
-            </div>
-            <div className="modal-body">
-              <div>
-                <h4>Nilai X:</h4>
-                <pre>{JSON.stringify(xValues, null, 2)}</pre>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn me-auto"
-                data-bs-dismiss="modal"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div
-        className="modal modal-blur fade"
-        id="modal-y"
-        tabIndex={-1}
-        style={{ display: "none" }}
-        aria-hidden="true"
-      >
-        <div
-          className="modal-dialog modal-dialog-centered modal-dialog-scrollable"
-          role="document"
-        >
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5 className="modal-title">Nilai y</h5>
-              <button
-                type="button"
-                className="btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-              />
-            </div>
-            <div className="modal-body">
-              <div>
-                <h4>Nilai y:</h4>
-                <pre>{JSON.stringify(yData, null, 2)}</pre>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn me-auto"
-                data-bs-dismiss="modal"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Modal xValues={xValues} yData={yData} />
     </Base>
   );
 }
